@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=0"/>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+    
+    <style>
+        :root {
+            --primary: #00d2ff;
+            --secondary: #3a7bd5;
+            --glass: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --bg-dark: #0f0f1a;
+        }
+
+        body {
+            background: radial-gradient(circle at top left, #1e1e2f, var(--bg-dark));
+            background-attachment: fixed;
+            color: white;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+        }
+
+        /* Modern Search Panel */
+        .search-panel {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .form-control {
+            background: rgba(0, 0, 0, 0.3) !important;
+            border: 1px solid var(--glass-border) !important;
+            color: white !important;
+            border-radius: 12px 0 0 12px !important;
+        }
+
+        .btn-search {
+            background: linear-gradient(45deg, var(--primary), var(--secondary)) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 0 12px 12px 0 !important;
+            padding: 0 25px;
+            transition: 0.3s;
+        }
+
+        .btn-search:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px var(--primary);
+        }
+
+        /* Album Section */
+        .album-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 30px;
+            padding: 25px;
+            margin-top: 30px;
+            backdrop-filter: blur(10px);
+            transition: 0.4s;
+        }
+
+        .img-thumbnail {
+            background: transparent !important;
+            border: 2px solid var(--primary) !important;
+            border-radius: 20px !important;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            transition: 0.5s;
+        }
+
+        .img-thumbnail:hover {
+            transform: translateY(-10px);
+        }
+
+        /* Song List Styling */
+        .list-group-item {
+            background: var(--glass) !important;
+            border: 1px solid var(--glass-border) !important;
+            color: white !important;
+            margin-bottom: 10px;
+            border-radius: 15px !important;
+            transition: 0.3s;
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .list-group-item:hover {
+            background: rgba(255, 255, 255, 0.15) !important;
+            transform: scale(1.02);
+            border-color: var(--primary) !important;
+        }
+
+        .play-btn {
+            color: var(--primary);
+            transition: 0.3s;
+            text-decoration: none;
+        }
+
+        .play-btn:hover {
+            color: #fff;
+            transform: scale(1.2);
+            text-shadow: 0 0 10px var(--primary);
+        }
+
+        /* Custom Radio Buttons */
+        .form-check-input:checked {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .album-text h2 {
+            background: linear-gradient(to right, #fff, var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.5rem;
+        }
+
+        .text-muted { color: rgba(255,255,255,0.6) !important; }
+
+    </style>
+    <title>{{ title }}</title>
+</head>
+<body>
+
+<div class="search-panel shadow">
+    <div class="container">
+        <div class="input-group mb-3">
+            <input type="text" class="form-control" placeholder="Search for songs or albums..." id="query"/>
+            <button class="btn btn-search" type="button" onclick="myFunction()">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+        
+        <div class="search-type d-flex justify-content-center gap-4 fw-bold">
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="search-type" id="songs" checked>
+                <label class="form-check-label" for="songs">Songs</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="search-type" id="albums">
+                <label class="form-check-label" for="albums">Albums</label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="row album-card align-items-center">
+        <div class="col-md-5 text-center">
+            <img src="{{ album_image }}" alt="" class="img-fluid img-thumbnail mb-3 mb-md-0" draggable="false"/>
+        </div>
+        <div class="col-md-7">
+            <div class="album-text">
+                <h2 class="fw-bold">{{ title }}</h2>
+                <div class="mt-4">
+                    <p class="mb-1"><i class="far fa-calendar-alt text-primary me-2"></i> Released: <span class="text-muted">{{ release_date }}</span></p>
+                    <p><i class="fas fa-user-astronaut text-primary me-2"></i> Artist: <span class="text-muted">{{ primary_artist }}</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="songs-list pt-5">
+        <h3 class="mb-4 fw-bold"><i class="fas fa-list-ul me-2 text-primary"></i> Tracklist</h3>
+        <div class="list-group">
+            {% for songName,song_ID in zip(songNames,song_IDs) %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <span class="me-3 opacity-50 fw-bold">{{ loop.index }}</span>
+                        <div>
+                            <div class="fw-bold fs-5">{{ songName }}</div>
+                            <small class="text-muted">{{ primary_artist }}</small>
+                        </div>
+                    </div>
+                    <a href="play_song?songID={{ song_ID }}" class="play-btn">
+                        <i class="fa-solid fa-circle-play fs-1"></i>
+                    </a>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function myFunction() {
+        var isAlbum = document.getElementById("albums").checked;
+        var query = document.getElementById("query").value;
+        if (!query) return;
+
+        if (isAlbum) {
+            window.open("/Album_Search?AlbumName=" + encodeURIComponent(query), "_self");
+        } else {
+            window.open("/search?songName=" + encodeURIComponent(query), "_self");
+        }
+    }
+
+    // പ്ലേ ബട്ടൺ ക്ലിക്ക് ചെയ്യുമ്പോൾ ഉള്ള മൈക്രോ ആനിമേഷൻ
+    document.querySelectorAll('.play-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            this.style.transform = "scale(0.8)";
+        });
+    });
+</script>
+
+</body>
+  </html>
