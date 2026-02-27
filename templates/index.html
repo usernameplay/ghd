@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GHD MUSIC</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #0b0e14; color: white; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
+        .active-tab { color: #00e5ff; }
+        .hide { display: none; }
+        .glass-player { background: rgba(15, 20, 28, 0.98); backdrop-filter: blur(15px); }
+        .custom-slider { accent-color: #00e5ff; height: 4px; width: 100%; cursor: pointer; }
+        .scroller::-webkit-scrollbar { display: none; }
+        .album-card img { border-radius: 12px; transition: transform 0.2s; }
+        .album-card:hover img { transform: scale(1.05); }
+    </style>
+</head>
+<body class="pb-40">
+
+    <header class="p-5 text-center">
+        <h1 class="text-2xl font-bold tracking-widest text-cyan-400">GHD MUSIC</h1>
+    </header>
+
+    <main id="main-view" class="px-4">
+        <section id="home-sec">
+            <div id="home-content"></div>
+        </section>
+
+        <section id="search-sec" class="hide">
+            <div class="bg-slate-900 rounded-full flex items-center px-4 py-2 mb-6 border border-slate-700">
+                <i class="fas fa-search text-gray-500 mr-2"></i>
+                <input type="text" id="search-box" placeholder="Search songs..." class="bg-transparent w-full outline-none">
+            </div>
+            <div id="search-results" class="grid grid-cols-2 gap-4"></div>
+        </section>
+
+        <section id="album-view" class="hide">
+            <button onclick="showPage('home')" class="mb-5 text-cyan-400 font-bold"><i class="fas fa-arrow-left"></i> BACK</button>
+            <div id="album-info" class="mb-6"></div>
+            <div id="album-songs" class="space-y-3"></div>
+        </section>
+    </main>
+
+    <div id="mini-player" class="fixed bottom-20 left-0 right-0 glass-player border-t border-slate-800 p-3 flex items-center gap-3 hide z-30" onclick="openFullPlayer()">
+        <img id="m-img" class="w-12 h-12 rounded object-cover">
+        <div class="flex-1 overflow-hidden">
+            <p id="m-title" class="truncate text-sm font-bold"></p>
+            <p id="m-artist" class="truncate text-xs text-gray-400"></p>
+        </div>
+        <button onclick="event.stopPropagation(); togglePlay()" class="w-10 h-10 flex items-center justify-center">
+            <i id="m-play-icon" class="fas fa-play text-xl"></i>
+        </button>
+    </div>
+
+    <div id="full-player" class="fixed inset-0 bg-[#0b0e14] z-50 hide p-8 flex flex-col items-center">
+        <div class="w-full flex justify-between items-center mb-8">
+            <button onclick="closeFullPlayer()"><i class="fas fa-chevron-down text-2xl"></i></button>
+            <h3 class="text-sm font-bold tracking-widest">NOW PLAYING</h3>
+            <i class="fas fa-sliders-h text-xl"></i>
+        </div>
+        
+        <img id="f-img" class="w-72 h-72 rounded-2xl shadow-2xl mb-10 object-cover">
+        
+        <div class="w-full text-left mb-8 px-2">
+            <h2 id="f-title" class="text-2xl font-bold truncate mb-1">Title</h2>
+            <p id="f-artist" class="text-gray-400 truncate mb-1">Artist Name</p>
+            <p id="f-album" class="text-cyan-500 text-xs font-bold uppercase"><i class="fas fa-compact-disc"></i> Album</p>
+        </div>
+        
+        <input type="range" id="f-progress" class="custom-slider mb-2" value="0">
+        <div class="w-full flex justify-between text-xs text-gray-500 mb-8 px-2">
+            <span id="f-current">0:00</span>
+            <span id="f-total">0:00</span>
+        </div>
+
+        <div class="flex items-center justify-between w-full max-w-xs mb-10">
+            <i class="fas fa-download text-xl text-gray-400"></i>
+            <i class="fas fa-step-backward text-2xl"></i>
+            <button onclick="togglePlay()" class="w-20 h-20 bg-white rounded-full flex items-center justify-center text-black">
+                <i id="f-play-icon" class="fas fa-play text-2xl"></i>
+            </button>
+            <i class="fas fa-step-forward text-2xl"></i>
+            <i class="fas fa-share-alt text-xl text-gray-400"></i>
+        </div>
+
+        <div class="w-full flex items-center gap-4 px-2">
+            <i class="fas fa-volume-down text-gray-500"></i>
+            <input type="range" id="f-vol" class="custom-slider" value="80" oninput="audio.volume = this.value/100">
+            <i class="fas fa-volume-up text-gray-500"></i>
+        </div>
+    </div>
+
+    <nav class="fixed bottom-0 left-0 right-0 h-20 bg-[#0f141c] border-t border-slate-800 flex justify-around items-center z-40">
+        <button onclick="showPage('home')" class="flex flex-col items-center active-tab" id="n-home">
+            <i class="fas fa-home text-xl"></i><span class="text-[10px] mt-1">Home</span>
+        </button>
+        <button onclick="showPage('search')" class="flex flex-col items-center text-gray-500" id="n-search">
+            <i class="fas fa-search text-xl"></i><span class="text-[10px] mt-1">Search</span>
+        </button>
+        <button onclick="alert('Playlists are coming soon!')" class="flex flex-col items-center text-gray-500">
+            <i class="fas fa-list-ul text-xl"></i><span class="text-[10px] mt-1">Playlist</span>
+        </button>
+    </nav>
+
+    <audio id="audio-engine"></audio>
+
+    <script>
+        const audio = document.getElementById('audio-engine');
+        let currentTrack = {};
+
+        window.onload = loadHome;
+
+        async function loadHome() {
+            const res = await fetch('/api/home');
+            const data = await res.json();
+            let html = '';
+            for (let lang in data) {
+                html += `<div class="mb-8">
+                    <div class="flex items-center mb-4"><div class="w-1 h-6 bg-cyan-500 mr-3"></div><h2 class="text-xl font-bold capitalize">Trending ${lang}</h2></div>
+                    <div class="flex gap-4 overflow-x-auto scroller px-1">`;
+                data[lang].forEach(item => {
+                    html += `<div class="min-w-[150px] album-card" onclick="openAlbum('${item.id}')">
+                        <img src="${item.image}" class="w-full mb-2 shadow-lg object-cover aspect-square">
+                        <p class="text-xs font-bold truncate px-1">${item.title}</p>
+                    </div>`;
+                });
+                html += `</div></div>`;
+            }
+            document.getElementById('home-content').innerHTML = html;
+        }
+
+        async function openAlbum(id) {
+            showPage('album');
+            document.getElementById('album-info').innerHTML = '<p class="text-center py-10">Loading Album...</p>';
+            const res = await fetch(`/api/album/${id}`);
+            const data = await res.json();
+            document.getElementById('album-info').innerHTML = `
+                <div class="flex flex-col items-center mt-5">
+                    <img src="${data.songs[0].image}" class="w-48 h-48 rounded-xl shadow-2xl mb-4 object-cover">
+                    <h2 class="text-2xl font-bold text-center px-4">${data.title}</h2>
+                </div>`;
+            let songsHtml = '';
+            data.songs.forEach(s => {
+                songsHtml += `<div class="bg-slate-900/40 p-3 rounded-lg flex items-center gap-4 hover:bg-slate-800 transition" onclick='playSong(${JSON.stringify(s)})'>
+                    <div class="w-10 h-10 bg-slate-800 rounded flex items-center justify-center"><i class="fas fa-play text-cyan-500 text-xs"></i></div>
+                    <div class="flex-1 overflow-hidden"><p class="font-bold truncate text-sm">${s.title}</p><p class="text-xs text-gray-500 truncate">${s.artist}</p></div>
+                </div>`;
+            });
+            document.getElementById('album-songs').innerHTML = songsHtml;
+        }
+
+        function playSong(song) {
+            if(!song.url) { alert("Song link not available!"); return; }
+            currentTrack = song;
+            audio.src = song.url;
+            audio.play();
+            updateUI();
+            document.getElementById('mini-player').classList.remove('hide');
+        }
+
+        function updateUI() {
+            const elements = ['m', 'f'];
+            elements.forEach(prefix => {
+                document.getElementById(`${prefix}-img`).src = currentTrack.image;
+                document.getElementById(`${prefix}-title`).innerText = currentTrack.title;
+                document.getElementById(`${prefix}-artist`).innerText = currentTrack.artist;
+                document.getElementById(`${prefix}-play-icon`).className = 'fas fa-pause ' + (prefix === 'f' ? 'text-2xl' : 'text-xl');
+            });
+            document.getElementById('f-album').innerText = currentTrack.album || '';
+        }
+
+        function togglePlay() {
+            if(audio.paused) { audio.play(); } else { audio.pause(); }
+            const icon = audio.paused ? 'fa-play' : 'fa-pause';
+            document.getElementById('m-play-icon').className = `fas ${icon} text-xl`;
+            document.getElementById('f-play-icon').className = `fas ${icon} text-2xl`;
+        }
+
+        function showPage(p) {
+            ['home-sec', 'search-sec', 'album-view'].forEach(s => document.getElementById(s).classList.add('hide'));
+            document.getElementById(p + (p === 'album' ? '-view' : '-sec')).classList.remove('hide');
+            document.getElementById('n-home').className = p === 'home' ? 'flex flex-col items-center active-tab' : 'flex flex-col items-center text-gray-500';
+            document.getElementById('n-search').className = p === 'search' ? 'flex flex-col items-center active-tab' : 'flex flex-col items-center text-gray-500';
+        }
+
+        function openFullPlayer() { document.getElementById('full-player').classList.remove('hide'); }
+        function closeFullPlayer() { document.getElementById('full-player').classList.add('hide'); }
+
+        audio.ontimeupdate = () => {
+            const prog = (audio.currentTime / audio.duration) * 100;
+            document.getElementById('f-progress').value = prog || 0;
+            document.getElementById('f-current').innerText = formatTime(audio.currentTime);
+            document.getElementById('f-total').innerText = formatTime(audio.duration);
+        };
+
+        document.getElementById('f-progress').oninput = (e) => audio.currentTime = (e.target.value / 100) * audio.duration;
+
+        function formatTime(s) {
+            let mins = Math.floor(s / 60);
+            let secs = Math.floor(s % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        document.getElementById('search-box').onkeyup = async (e) => {
+            if(e.key === 'Enter' && e.target.value.trim() !== '') {
+                const res = await fetch(`/api/search?q=${e.target.value}`);
+                const data = await res.json();
+                let html = '';
+                data.forEach(s => {
+                    html += `<div class="bg-slate-900/60 p-2 rounded-lg" onclick='playSong(${JSON.stringify(s)})'>
+                        <img src="${s.image}" class="w-full rounded-md mb-2 aspect-square object-cover">
+                        <p class="text-[10px] font-bold truncate px-1">${s.title}</p>
+                    </div>`;
+                });
+                document.getElementById('search-results').innerHTML = html || '<p class="col-span-2 text-center py-10">No results found</p>';
+            }
+        };
+    </script>
+</body>
+</html>
