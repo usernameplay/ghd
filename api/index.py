@@ -1,22 +1,21 @@
 from flask import Flask, render_template, request, jsonify
 import requests
-import json
 import html
 import base64
-from pyDes import * #
+from Crypto.Cipher import DES
+from Crypto.Util.Padding import unpad
 
 app = Flask(__name__, template_folder='../templates')
 
-# JioSaavn Decryption Setup
-des_cipher = des(b"38346591", ECB, b"\0\0\0\0\0\0\0\0", pad=None, padmode=PAD_PKCS5) #
-
+# Decryption for JioSaavn
 def decrypt_url(url):
     try:
+        key = b'38346591'
+        cipher = DES.new(key, DES.MODE_ECB)
         enc_url = base64.b64decode(url.strip())
-        dec_url = des_cipher.decrypt(enc_url, padmode=PAD_PKCS5).decode("utf-8")
+        dec_url = unpad(cipher.decrypt(enc_url), 8).decode('utf-8')
         return dec_url.replace("_96.mp4", "_320.mp3").replace("_96.mp3", "_320.mp3")
-    except Exception as e:
-        print(f"Decryption error: {e}")
+    except:
         return ""
 
 @app.route('/')
@@ -25,11 +24,11 @@ def index():
 
 @app.route('/api/home')
 def get_home():
-    languages = ['malayalam', 'tamil', 'hindi']
+    langs = ['malayalam', 'tamil', 'hindi']
     results = {}
-    for lang in languages:
+    for lang in langs:
         try:
-            url = "https://www.jiosaavn.com/api.php?__call=content.getHomepageData&_format=json&cc=in&_marker=0&ctx=web6dot0"
+            url = f"https://www.jiosaavn.com/api.php?__call=content.getHomepageData&_format=json&cc=in&_marker=0&ctx=web6dot0"
             res = requests.get(url, cookies={"L": lang}).json()
             results[lang] = [{
                 "id": a["id"],
@@ -50,7 +49,6 @@ def get_album(id):
         "title": html.unescape(s["song"]),
         "image": s["image"].replace("150x150", "500x500"),
         "artist": s["singers"],
-        "album": s["album"],
         "url": decrypt_url(s["encrypted_media_url"])
     } for s in data.get("songs", [])]
     return jsonify({"title": data["title"], "songs": songs})
@@ -68,7 +66,3 @@ def search():
         "url": decrypt_url(s["encrypted_media_url"]) if "encrypted_media_url" in s else ""
     } for s in res]
     return jsonify(results)
-
-# Vercel requirements: app must be globally available
-if __name__ == "__main__":
-    app.run()
