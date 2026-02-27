@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0'>
+    
+    <link rel="shortcut icon" href="{{image}}" type="image/webp">
+    <link rel="icon" href="{{image}}" type="image/webp">
+    <meta name="description" content="Play And Download Your Songs In High Quality" />
+    <meta property="og:title" content="{{songName}}" />
+    <meta property="og:image" content="{{image}}" />
+    <meta name="robots" content="index, follow" />
+    <title>Results for {{ songName }}</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #00d2ff;
+            --secondary: #3a7bd5;
+            --glass: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --bg-dark: #0f0f1a;
+        }
+
+        body {
+            background: radial-gradient(circle at top left, #1e1e2f, var(--bg-dark));
+            background-attachment: fixed;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        /* --- Sticky Search Panel --- */
+        .search-panel {
+            background: rgba(15, 15, 26, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .form-control {
+            background: rgba(0, 0, 0, 0.3) !important;
+            border: 1px solid var(--glass-border) !important;
+            color: white !important;
+            border-radius: 12px 0 0 12px !important;
+        }
+
+        .btn-search {
+            background: linear-gradient(45deg, var(--primary), var(--secondary)) !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 0 12px 12px 0 !important;
+            padding: 0 25px;
+            transition: 0.3s;
+        }
+
+        .btn-search:hover { transform: scale(1.05); box-shadow: 0 0 15px var(--primary); }
+
+        /* --- Grid & Cards --- */
+        .results-header {
+            font-weight: 700;
+            margin: 30px 0;
+            background: linear-gradient(to right, #fff, var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card {
+            background: var(--glass) !important;
+            border: 1px solid var(--glass-border) !important;
+            border-radius: 20px !important;
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            height: 100%;
+            backdrop-filter: blur(10px);
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary) !important;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        }
+
+        .card-img-top {
+            padding: 10px;
+            border-radius: 20px;
+            transition: 0.5s;
+        }
+
+        .card:hover .card-img-top { transform: scale(1.03); }
+
+        .card-title { font-size: 1rem; font-weight: 600; margin-bottom: 5px; color: #fff; }
+        .card-text { font-size: 0.8rem; color: rgba(255,255,255,0.5) !important; }
+
+        .btn-listen {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid var(--glass-border);
+            color: white;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            transition: 0.3s;
+        }
+
+        .btn-listen:hover {
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            border-color: transparent;
+            transform: scale(1.05);
+        }
+
+        /* Entrance Animation */
+        .search-results .col-6 {
+            animation: fadeInUp 0.6s ease forwards;
+            opacity: 0;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Staggered Delay */
+        {% for i in range(20) %}
+        .col-6:nth-child({{i}}) { animation-delay: {{i * 0.07}}s; }
+        {% endfor %}
+
+    </style>
+</head>
+<body>
+
+<div class="search-panel shadow">
+    <div class="container">
+        <div class="input-group mb-3">
+            <input type="text" class="form-control" placeholder="Search for more..." id="query" value="{{ songName }}"/>
+            <button class="btn btn-search" type="button" onclick="myFunction()">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+        
+        <div class="search-type d-flex justify-content-center gap-4 fw-bold">
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="stype" id="songs" checked>
+                <label class="form-check-label" for="songs">Songs</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="stype" id="albums">
+                <label class="form-check-label" for="albums">Albums</label>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid px-4">
+    <h2 class="text-center results-header">Search Results for "{{ songName }}"</h2>
+    
+    <div class="search-results">
+        <div class="row g-3">
+            {% for songID,image,songs_title,year in zip(songIDs,images,songs_titles, years) %}
+            <div class="col-6 col-md-4 col-lg-2">
+                <div class="card shadow-sm">
+                    <img class="card-img-top" src="{{ image }}" alt="Cover" loading="lazy" draggable="false"/>
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title text-truncate" title="{{ songs_title|safe }}">{{ songs_title|safe }}</h5>
+                        <p class="card-text mb-3 small"><i class="far fa-calendar-alt me-1"></i> {{ year }}</p>
+                        <a href="/play_song?songID={{ songID }}" class="btn btn-listen mt-auto">
+                            <i class="fas fa-play-circle me-1"></i> Listen
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function myFunction() {
+        var isAlbum = document.getElementById("albums").checked;
+        var query = document.getElementById("query").value;
+        if (!query) return;
+
+        if (isAlbum) {
+            window.open("/Album_Search?AlbumName=" + encodeURIComponent(query), "_self");
+        } else {
+            window.open("/search?songName=" + encodeURIComponent(query), "_self");
+        }
+    }
+
+    // Search on Enter key
+    document.getElementById("query").addEventListener("keypress", function(e) {
+        if (e.key === "Enter") myFunction();
+    });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+  </html>
