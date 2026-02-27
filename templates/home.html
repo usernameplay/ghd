@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=0" />
+    <title>GHD MUSIC</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"/>
+   <link rel="icon" href="https://i.ibb.co/67FBHTvH/file-0000000047d8720999fc5f1c62c4fb33.png">
+    <style>
+        :root {
+            --primary: #00d2ff;
+            --glass: rgba(255, 255, 255, 0.08);
+            --border: rgba(255, 255, 255, 0.15);
+            --bg: #0f0f1a;
+        }
+
+        body { 
+            background: var(--bg); color: white; 
+            padding-top: 75px; padding-bottom: 95px; 
+            font-family: 'Segoe UI', sans-serif; font-weight: 900 !important; 
+            overflow-x: hidden;
+        }
+
+        /* Top Header */
+        .top-header { 
+            position: fixed; top: 0; width: 100%; 
+            background: rgba(15, 15, 26, 0.95); padding: 18px; 
+            text-align: center; border-bottom: 1px solid var(--border); 
+            z-index: 1000; backdrop-filter: blur(10px);
+        }
+        .top-header h4 { margin: 0; font-weight: 900; color: var(--primary); letter-spacing: 1px; }
+
+        /* Sections */
+        .lang-section { padding: 10px 0 10px 15px; }
+        .lang-title { font-size: 1.2rem; font-weight: 900; margin-bottom: 15px; border-left: 5px solid var(--primary); padding-left: 12px; }
+        .horizontal-scroll { display: flex; overflow-x: auto; gap: 15px; padding-bottom: 10px; scrollbar-width: none; }
+        .horizontal-scroll::-webkit-scrollbar { display: none; }
+
+        /* Music Card */
+        .card { 
+            min-width: 150px; max-width: 150px;
+            background: var(--glass) !important; border: 1px solid var(--border) !important; 
+            border-radius: 15px !important; transition: 0.3s; position: relative; overflow: hidden;
+        }
+        .card:active { transform: scale(0.95); }
+        .card-img-top { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 12px; padding: 7px; }
+        .card-name { padding: 0 8px 10px; text-align: center; font-weight: 900; font-size: 0.8rem; }
+
+        /* Overlay Styles (Search & Playlist) */
+        .full-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 10, 18, 0.98); z-index: 2000; 
+            display: none; flex-direction: column; padding: 25px; 
+            backdrop-filter: blur(15px); animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .close-btn { position: absolute; top: 25px; right: 25px; font-size: 1.8rem; color: #ff4d4d; cursor: pointer; }
+
+        /* Playlist Item Styles */
+        #playlist-items { overflow-y: auto; margin-top: 20px; }
+        .playlist-card {
+            display: flex; align-items: center; background: var(--glass);
+            margin-bottom: 10px; padding: 10px; border-radius: 10px; border: 1px solid var(--border);
+        }
+        .playlist-card img { width: 50px; height: 50px; border-radius: 5px; margin-right: 15px; }
+
+        /* Custom Toast */
+        #custom-toast {
+            position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+            background: var(--primary); color: #000; padding: 12px 25px;
+            border-radius: 30px; font-weight: 900; z-index: 5000;
+            display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        /* Bottom Nav */
+        .bottom-nav { 
+            position: fixed; bottom: 0; width: 100%; background: #141423; 
+            display: flex; justify-content: space-around; padding: 12px 0; 
+            border-top: 1px solid var(--border); z-index: 1000; 
+        }
+        .nav-item { text-align: center; color: rgba(255,255,255,0.6); text-decoration: none; font-size: 0.75rem; font-weight: 900; cursor: pointer; }
+        .nav-item.active { color: var(--primary); }
+        .nav-item i { font-size: 1.4rem; display: block; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="top-header"><h4>GHD MUSIC</h4></div>
+
+    <div id="searchOverlay" class="full-overlay">
+        <i class="fas fa-times close-btn" onclick="closeOverlay('searchOverlay')"></i>
+        <div class="container mt-5">
+            <h3 class="text-center mb-4" style="color: var(--primary);">SEARCH MUSIC</h3>
+            <input type="text" id="searchInput" class="form-control bg-dark text-white border-info mb-3" placeholder="Search...">
+            <button class="btn btn-info w-100" onclick="executeSearch()">SEARCH NOW</button>
+        </div>
+    </div>
+
+    <div id="playlistOverlay" class="full-overlay">
+        <i class="fas fa-times close-btn" onclick="closeOverlay('playlistOverlay')"></i>
+        <div class="container mt-5">
+            <h3 class="text-center mb-4" style="color: var(--primary);">MY PLAYLIST</h3>
+            <div id="playlist-items">
+                </div>
+        </div>
+    </div>
+
+    <div id="custom-toast"></div>
+
+    <div class="container-fluid p-0">
+        {% for section_name, section_data in [('Trending Malayalam', mal), ('Trending Tamil', tam), ('Trending Hindi', hin)] %}
+        <div class="lang-section">
+            <div class="lang-title">{{ section_name }}</div>
+            <div class="horizontal-scroll">
+                {% for a in section_data %}
+                <div class="card" 
+                     onmousedown="startPress('{{a.id}}', '{{a.name}}', '{{a.image}}')" 
+                     onmouseup="endPress()" 
+                     ontouchstart="startPress('{{a.id}}', '{{a.name}}', '{{a.image}}')" 
+                     ontouchend="endPress()"
+                     onclick="location.href='/get_album?albumID={{a.id}}'">
+                    
+                    <img src="{{a.image}}" class="card-img-top">
+                    <div class="card-name text-truncate">{{a.name}}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="location.href='/home'"><i class="fas fa-home"></i>Home</div>
+        <div class="nav-item" onclick="openOverlay('searchOverlay')"><i class="fas fa-search"></i>Search</div>
+        <div class="nav-item" onclick="openPlaylist()"><i class="fas fa-list"></i>Playlist</div>
+    </div>
+
+    <script>
+        let pressTimer;
+
+        function openOverlay(id) {
+            document.getElementById(id).style.display = 'flex';
+        }
+
+        function closeOverlay(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // Playlist Logic
+        function openPlaylist() {
+            const playlistItems = document.getElementById('playlist-items');
+            const playlist = JSON.parse(localStorage.getItem('myPlaylist') || '[]');
+            
+            playlistItems.innerHTML = playlist.length ? '' : '<p class="text-center">Playlist is empty</p>';
+            
+            playlist.forEach(item => {
+                playlistItems.innerHTML += `
+                    <div class="playlist-card" onclick="location.href='/get_album?albumID=${item.id}'">
+                        <img src="${item.image}">
+                        <div class="text-truncate">${item.name}</div>
+                    </div>
+                `;
+            });
+            openOverlay('playlistOverlay');
+        }
+
+        // Long Press to Add
+        function startPress(id, name, image) {
+            pressTimer = setTimeout(() => {
+                addToPlaylist(id, name, image);
+            }, 800);
+        }
+
+        function endPress() {
+            clearTimeout(pressTimer);
+        }
+
+        function addToPlaylist(id, name, image) {
+            let playlist = JSON.parse(localStorage.getItem('myPlaylist') || '[]');
+            if(!playlist.find(i => i.id === id)) {
+                playlist.push({id, name, image});
+                localStorage.setItem('myPlaylist', JSON.stringify(playlist));
+                showToast("Added to Playlist! ⭐");
+            } else {
+                showToast("Already in Playlist!");
+            }
+        }
+
+        function showToast(msg) {
+            let t = document.getElementById('custom-toast');
+            t.innerText = msg; t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 2000);
+        }
+
+        function executeSearch() {
+            let q = document.getElementById('searchInput').value;
+            if(q) window.location.href = `/search?songName=${encodeURIComponent(q)}&type=song`;
+        }
+    </script>
+</body>
+</html>
+
+  
