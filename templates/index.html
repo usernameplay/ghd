@@ -4,179 +4,113 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GHD MUSIC</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background-color: #05070a; color: white; font-family: sans-serif; }
-        .active-tab { color: #00f2ff; }
-        .hide { display: none; }
-        .scroller::-webkit-scrollbar { display: none; }
-        .player-gradient { background: linear-gradient(to top, #0a0e14 90%, transparent); }
+        :root { --bg: #0f0f0f; --card: #1e1e1e; --accent: #1db954; --text: #ffffff; }
+        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding-bottom: 150px; }
+        header { padding: 20px; text-align: center; font-size: 24px; font-weight: bold; color: var(--accent); }
+        
+        .section-title { padding: 10px 20px; font-size: 18px; }
+        .horizontal-scroll { display: flex; overflow-x: auto; padding: 10px; gap: 15px; scrollbar-width: none; }
+        .horizontal-scroll::-webkit-scrollbar { display: none; }
+        
+        .album-card { min-width: 140px; background: var(--card); padding: 10px; border-radius: 10px; text-align: center; cursor: pointer; }
+        .album-card img { width: 100%; border-radius: 8px; }
+        .album-card p { font-size: 12px; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Bottom Player */
+        #player-bar { position: fixed; bottom: 70px; left: 0; right: 0; background: #282828; padding: 10px; display: none; align-items: center; border-radius: 15px 15px 0 0; }
+        #player-bar img { width: 50px; height: 50px; border-radius: 5px; margin-right: 10px; }
+        
+        /* Bottom Nav */
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #000; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #333; }
+        .bottom-nav i { font-size: 20px; color: #888; cursor: pointer; }
+        .bottom-nav .active { color: var(--accent); }
+
+        /* Search & Album View Overlay */
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 90%; background: var(--bg); display: none; overflow-y: auto; padding-top: 20px; z-index: 100; }
+        .song-item { display: flex; align-items: center; padding: 10px 20px; border-bottom: 1px solid #222; cursor: pointer; }
+        .close-btn { position: absolute; top: 10px; right: 20px; font-size: 25px; }
     </style>
 </head>
-<body class="pb-40">
+<body>
 
-    <div class="flex justify-center p-6">
-        <img src="https://i.ibb.co/67FBHTvH/file-0000000047d8720999fc5f1c62c4fb33.png" alt="GHD MUSIC" class="h-12">
-    </div>
+    <header>GHD MUSIC</header>
 
-    <main id="main-view" class="px-4">
-        <section id="home-sec">
-            <div id="home-content"></div>
-        </section>
-
-        <section id="search-sec" class="hide">
-            <input type="text" id="search-box" placeholder="Search songs or albums..." 
-                   class="w-full bg-gray-900 border-none rounded-full py-3 px-6 mb-6 outline-none focus:ring-2 focus:ring-cyan-500">
-            <div id="search-results" class="grid grid-cols-2 gap-4"></div>
-        </section>
-
-        <section id="album-view" class="hide">
-            <button onclick="showPage('home')" class="mb-4 text-cyan-400"><i class="fas fa-chevron-left"></i> Back</button>
-            <div id="album-info" class="text-center mb-6"></div>
-            <div id="album-songs" class="space-y-2"></div>
-        </section>
-    </main>
-
-    <div id="mini-player" class="fixed bottom-20 left-0 right-0 bg-[#0f141c] p-3 flex items-center gap-3 border-t border-gray-800 hide z-40" onclick="openFullPlayer()">
-        <img id="m-img" class="w-12 h-12 rounded">
-        <div class="flex-1 overflow-hidden">
-            <p id="m-title" class="truncate font-bold text-sm"></p>
-            <p id="m-artist" class="truncate text-xs text-gray-400"></p>
+    <div id="home-content">
+        <div class="section-title">Malayalam Trending</div>
+        <div class="horizontal-scroll">
+            {% for album in data.malayalam %}
+            <div class="album-card" onclick="openAlbum('{{album.id}}')">
+                <img src="{{album.image}}">
+                <p>{{album.name}}</p>
+            </div>
+            {% endfor %}
         </div>
-        <button onclick="event.stopPropagation(); togglePlay()"><i id="m-play-icon" class="fas fa-play text-xl"></i></button>
-    </div>
-
-    <div id="full-player" class="fixed inset-0 bg-[#05070a] z-50 hide p-8 flex flex-col items-center">
-        <button onclick="closeFullPlayer()" class="absolute top-8 left-8"><i class="fas fa-chevron-down text-2xl"></i></button>
-        <img id="f-img" class="w-72 h-72 rounded-2xl shadow-2xl mt-20 mb-10 object-cover">
-        <h2 id="f-title" class="text-2xl font-bold text-center truncate w-full"></h2>
-        <p id="f-artist" class="text-gray-400 mb-10"></p>
         
-        <input type="range" id="f-progress" class="w-full accent-cyan-500 mb-2" value="0">
-        <div class="w-full flex justify-between text-xs text-gray-500 mb-8">
-            <span id="f-current">0:00</span><span id="f-total">0:00</span>
-        </div>
-
-        <div class="flex items-center justify-around w-full max-w-xs">
-            <i class="fas fa-step-backward text-2xl"></i>
-            <button onclick="togglePlay()" class="w-16 h-16 bg-white text-black rounded-full flex items-center justify-center">
-                <i id="f-play-icon" class="fas fa-play text-xl"></i>
-            </button>
-            <i class="fas fa-step-forward text-2xl"></i>
+        <div class="section-title">Tamil Trending</div>
+        <div class="horizontal-scroll">
+            {% for album in data.tamil %}
+            <div class="album-card" onclick="openAlbum('{{album.id}}')">
+                <img src="{{album.image}}">
+                <p>{{album.name}}</p>
+            </div>
+            {% endfor %}
         </div>
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 h-20 bg-[#0a0e14] border-t border-gray-900 flex justify-around items-center z-50">
-        <button onclick="showPage('home')" id="n-home" class="active-tab flex flex-col items-center">
-            <i class="fas fa-home text-xl"></i><span class="text-[10px]">Home</span>
-        </button>
-        <button onclick="showPage('search')" id="n-search" class="text-gray-500 flex flex-col items-center">
-            <i class="fas fa-search text-xl"></i><span class="text-[10px]">Search</span>
-        </button>
-        <button class="text-gray-500 flex flex-col items-center">
-            <i class="fas fa-list text-xl"></i><span class="text-[10px]">Playlist</span>
-        </button>
-    </nav>
+    <div id="album-view" class="overlay">
+        <span class="close-btn" onclick="$('.overlay').hide()">&times;</span>
+        <div id="album-songs-list"></div>
+    </div>
 
-    <audio id="audio-engine"></audio>
+    <div id="player-bar">
+        <img id="play-img" src="">
+        <div style="flex-grow: 1;">
+            <div id="play-title" style="font-size: 14px; font-weight: bold;"></div>
+            <div id="play-artist" style="font-size: 12px; color: #aaa;"></div>
+        </div>
+        <audio id="main-audio" controls style="height: 30px;"></audio>
+    </div>
+
+    <div class="bottom-nav">
+        <i class="fas fa-home active" onclick="showHome()"></i>
+        <i class="fas fa-search" onclick="alert('Search feature loading...')"></i>
+        <i class="fas fa-list"></i>
+    </div>
 
     <script>
-        const audio = document.getElementById('audio-engine');
-        let current = {};
-
-        window.onload = async () => {
-            const res = await fetch('/api/home');
-            const data = await res.json();
-            let html = '';
-            for(let lang in data) {
-                html += `<h2 class="text-lg font-bold mt-6 mb-3 capitalize tracking-wide">${lang} Trending</h2>
-                         <div class="flex gap-4 overflow-x-auto scroller pb-2">`;
-                data[lang].forEach(a => {
-                    html += `<div class="min-w-[140px]" onclick="openAlbum('${a.id}')">
-                                <img src="${a.image}" class="rounded-lg shadow-lg mb-2">
-                                <p class="text-xs font-bold truncate">${a.title}</p>
+        function openAlbum(id) {
+            $.getJSON('/api/album/' + id, function(data) {
+                let html = `<div style="text-align:center; padding:20px;">
+                                <img src="${data.image.replace('150x150','500x500')}" style="width:200px; border-radius:10px;">
+                                <h2>${data.title}</h2>
+                            </div>`;
+                data.songs.forEach(song => {
+                    html += `<div class="song-item" onclick="playSong('${song.id}')">
+                                <div style="flex-grow:1;"><b>${song.song}</b><br><small>${song.singers}</small></div>
+                                <i class="fas fa-play"></i>
                              </div>`;
                 });
-                html += `</div>`;
-            }
-            document.getElementById('home-content').innerHTML = html;
-        };
-
-        async function openAlbum(id) {
-            showPage('album');
-            const res = await fetch(`/api/album/${id}`);
-            const data = await res.json();
-            document.getElementById('album-info').innerHTML = `
-                <img src="${data.songs[0].image}" class="w-48 h-48 mx-auto rounded-xl shadow-xl mb-4">
-                <h2 class="text-xl font-bold">${data.title}</h2>`;
-            let sHtml = '';
-            data.songs.forEach(s => {
-                sHtml += `<div class="bg-gray-900/50 p-3 rounded-lg flex items-center gap-4" onclick='playSong(${JSON.stringify(s)})'>
-                            <i class="fas fa-play text-cyan-400"></i>
-                            <div class="overflow-hidden"><p class="text-sm font-bold truncate">${s.title}</p></div>
-                          </div>`;
-            });
-            document.getElementById('album-songs').innerHTML = sHtml;
-        }
-
-        function playSong(s) {
-            current = s;
-            audio.src = s.url;
-            audio.play();
-            document.getElementById('mini-player').classList.remove('hide');
-            updateUI();
-        }
-
-        function updateUI() {
-            ['m', 'f'].forEach(p => {
-                document.getElementById(`${p}-img`).src = current.image;
-                document.getElementById(`${p}-title`).innerText = current.title;
-                document.getElementById(`${p}-artist`).innerText = current.artist;
-                document.getElementById(`${p}-play-icon`).className = audio.paused ? 'fas fa-play' : 'fas fa-pause';
+                $('#album-songs-list').html(html);
+                $('#album-view').fadeIn();
             });
         }
 
-        function togglePlay() {
-            audio.paused ? audio.play() : audio.pause();
-            updateUI();
+        function playSong(id) {
+            $.getJSON('/api/song/' + id, function(data) {
+                $('#play-img').attr('src', data.image.replace('150x150','500x500'));
+                $('#play-title').text(data.song);
+                $('#play-artist').text(data.singers);
+                $('#main-audio').attr('src', data.download_url);
+                $('#player-bar').css('display', 'flex');
+                document.getElementById('main-audio').play();
+            });
         }
 
-        function showPage(p) {
-            ['home-sec', 'search-sec', 'album-view'].forEach(s => document.getElementById(s).classList.add('hide'));
-            document.getElementById(p + (p==='album'?'':' -sec').trim()).classList.remove('hide');
-            document.getElementById('n-home').className = p==='home'?'active-tab flex flex-col items-center':'text-gray-500 flex flex-col items-center';
-            document.getElementById('n-search').className = p==='search'?'active-tab flex flex-col items-center':'text-gray-500 flex flex-col items-center';
-        }
-
-        function openFullPlayer() { document.getElementById('full-player').classList.remove('hide'); }
-        function closeFullPlayer() { document.getElementById('full-player').classList.add('hide'); }
-
-        document.getElementById('search-box').onkeypress = async (e) => {
-            if(e.key === 'Enter') {
-                const res = await fetch(`/api/search?q=${e.target.value}`);
-                const data = await res.json();
-                let html = '';
-                data.forEach(s => {
-                    html += `<div class="bg-gray-900 p-2 rounded-lg" onclick='playSong(${JSON.stringify(s)})'>
-                                <img src="${s.image}" class="rounded mb-2">
-                                <p class="text-[10px] font-bold truncate">${s.title}</p>
-                             </div>`;
-                });
-                document.getElementById('search-results').innerHTML = html;
-            }
-        };
-
-        audio.ontimeupdate = () => {
-            const p = (audio.currentTime / audio.duration) * 100;
-            document.getElementById('f-progress').value = p || 0;
-            document.getElementById('f-current').innerText = formatTime(audio.currentTime);
-            document.getElementById('f-total').innerText = formatTime(audio.duration);
-        };
-
-        function formatTime(t) {
-            let m = Math.floor(t/60), s = Math.floor(t%60);
-            return `${m}:${s<10?'0':''}${s}`;
+        function showHome() {
+            $('.overlay').hide();
         }
     </script>
 </body>
