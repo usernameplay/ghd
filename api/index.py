@@ -3,19 +3,20 @@ import requests
 import json
 import html
 import base64
-from pyDes import *
+from pyDes import * #
 
 app = Flask(__name__, template_folder='../templates')
 
 # JioSaavn Decryption Setup
-des_cipher = des(b"38346591", ECB, b"\0\0\0\0\0\0\0\0", pad=None, padmode=PAD_PKCS5)
+des_cipher = des(b"38346591", ECB, b"\0\0\0\0\0\0\0\0", pad=None, padmode=PAD_PKCS5) #
 
 def decrypt_url(url):
     try:
         enc_url = base64.b64decode(url.strip())
         dec_url = des_cipher.decrypt(enc_url, padmode=PAD_PKCS5).decode("utf-8")
         return dec_url.replace("_96.mp4", "_320.mp3").replace("_96.mp3", "_320.mp3")
-    except:
+    except Exception as e:
+        print(f"Decryption error: {e}")
         return ""
 
 @app.route('/')
@@ -27,14 +28,17 @@ def get_home():
     languages = ['malayalam', 'tamil', 'hindi']
     results = {}
     for lang in languages:
-        url = "https://www.jiosaavn.com/api.php?__call=content.getHomepageData&_format=json&cc=in&_marker=0&ctx=web6dot0"
-        res = requests.get(url, cookies={"L": lang}).json()
-        results[lang] = [{
-            "id": a["id"],
-            "title": html.unescape(a["text"]),
-            "image": a["image"].replace("150x150", "500x500"),
-            "artist": a.get("subtitle", "")
-        } for a in res.get("new_albums", [])[:10]]
+        try:
+            url = "https://www.jiosaavn.com/api.php?__call=content.getHomepageData&_format=json&cc=in&_marker=0&ctx=web6dot0"
+            res = requests.get(url, cookies={"L": lang}).json()
+            results[lang] = [{
+                "id": a["id"],
+                "title": html.unescape(a["text"]),
+                "image": a["image"].replace("150x150", "500x500"),
+                "artist": a.get("subtitle", "")
+            } for a in res.get("new_albums", [])[:10]]
+        except:
+            results[lang] = []
     return jsonify(results)
 
 @app.route('/api/album/<id>')
@@ -65,7 +69,6 @@ def search():
     } for s in res]
     return jsonify(results)
 
-# Vercel needs this
-def handler(event, context):
-    return app(event, context)
-  
+# Vercel requirements: app must be globally available
+if __name__ == "__main__":
+    app.run()
