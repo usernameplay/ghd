@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0'>
+  <link rel="icon" type="image/png" href="{{image}}">
+  <title>{{song_name|safe}}</title>
+  
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #00d2ff;
+      --secondary: #3a7bd5;
+      --glass: rgba(255, 255, 255, 0.05);
+      --glass-border: rgba(255, 255, 255, 0.1);
+      --accent-gradient: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+    }
+
+    body {
+      background: #0f0f1a;
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      align-items: center; justify-content: center;
+      color: white;
+      font-family: 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+    }
+
+    .player-card {
+      background: linear-gradient(180deg, #1e1e2f 0%, #0f0f1a 100%);
+      width: 100vw; height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 20px; text-align: center; position: relative;
+    }
+
+    .top-nav {
+      position: absolute; top: 30px; left: 20px; right: 20px;
+      display: flex; justify-content: space-between; z-index: 10;
+    }
+
+    .main-wrapper { max-width: 450px; width: 100%; padding: 20px; }
+
+    .track-art {
+      height: 320px; width: 320px; border-radius: 20px;
+      margin: 0 auto 30px; background-size: cover; background-position: center;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.7);
+      transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      border: 1px solid var(--glass-border);
+    }
+
+    .playing .track-art {
+      transform: scale(1.03);
+      box-shadow: 0 0 40px rgba(0, 210, 255, 0.4);
+      border: 2px solid var(--primary);
+    }
+
+    .track-name { 
+      font-size: 1.8rem; font-weight: 700; margin-bottom: 8px;
+      background: linear-gradient(to right, #fff, var(--primary));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+
+    .track-artist { font-size: 1.1rem; opacity: 0.5; margin-bottom: 5px; }
+
+    .album-detail { font-size: 0.9rem; color: var(--primary); margin-bottom: 30px; opacity: 0.8; }
+
+    .slider_container { width: 100%; margin-bottom: 30px; }
+
+    input[type=range] {
+      -webkit-appearance: none; width: 100%; height: 6px;
+      border-radius: 10px; outline: none;
+      background: rgba(255,255,255,0.1);
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; height: 16px; width: 16px;
+      border-radius: 50%; background: var(--primary);
+      cursor: pointer; box-shadow: 0 0 10px var(--primary);
+    }
+
+    .main-controls {
+      display: flex; align-items: center; justify-content: space-between;
+      width: 100%; margin-bottom: 30px;
+    }
+
+    .playpause-track { font-size: 75px; color: white; cursor: pointer; }
+
+    .action-btn {
+      background: var(--glass); border: 1px solid var(--glass-border);
+      color: white; width: 55px; height: 55px; border-radius: 50%;
+      font-size: 18px; display: flex; align-items: center; justify-content: center;
+    }
+
+    /* --- ENHANCED EQ PANEL --- */
+    .eq-panel {
+      position: fixed; bottom: -100%; left: 0; width: 100%;
+      background: #161625; border-top: 3px solid var(--primary);
+      border-top-left-radius: 30px; border-top-right-radius: 30px;
+      padding: 25px 20px; transition: 0.5s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1000;
+      box-shadow: 0 -15px 35px rgba(0,0,0,0.6);
+    }
+    .eq-panel.active { bottom: 0; }
+    
+    .eq-container { display: flex; justify-content: space-around; height: 200px; padding: 15px 0; }
+    
+    .eq-column { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    
+    .val-badge { 
+        background: var(--primary); color: #000; font-size: 10px; 
+        padding: 2px 6px; border-radius: 10px; font-weight: bold; min-width: 25px; text-align: center;
+    }
+
+    .vertical-slider {
+      -webkit-appearance: none; 
+      width: 5px; height: 130px; 
+      background: rgba(255,255,255,0.1);
+      border-radius: 5px; outline: none;
+      writing-mode: bt-lr; /* IE */
+      appearance: slider-vertical; /* Webkit */
+    }
+
+    .freq-name { font-size: 11px; opacity: 0.6; font-weight: 500; }
+
+    .bass-boost-section {
+      background: rgba(255,255,255,0.03);
+      border-radius: 20px; padding: 15px; margin-top: 15px;
+      border: 1px solid var(--glass-border);
+    }
+
+    #notification {
+      position: fixed; top: 30px; left: 50%; transform: translateX(-50%);
+      background: var(--primary); color: #000; padding: 12px 25px;
+      border-radius: 30px; display: none; z-index: 10000; font-weight: 700;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="notification">Action Successful!</div>
+
+  <div class="player-card" id="player-container">
+    <div class="top-nav">
+      <button class="action-btn" onclick="goHome()"><i class="fa fa-arrow-left"></i></button>
+      <button class="action-btn" onclick="toggleEQ()"><i class="fa fa-sliders"></i></button>
+    </div>
+
+    <div class="main-wrapper">
+      <div class="track-art" id="track-art"></div>
+      <div class="track-name" id="track-name">Loading...</div>
+      <div class="track-artist" id="track-artist">Please wait</div>
+      <div class="album-detail"><i class="fa fa-compact-disc"></i> {{album_name|safe}}</div>
+
+      <div class="slider_container">
+        <input type="range" min="0" max="100" value="0" class="seek_slider" id="seek_slider">
+        <div class="d-flex justify-content-between mt-2" style="font-size: 13px; opacity: 0.6;">
+          <span id="current-time">00:00</span>
+          <span id="total-duration">00:00</span>
+        </div>
+      </div>
+
+      <div class="main-controls">
+        <button class="action-btn" id="downloadBtn"><i class="fa fa-download"></i></button>
+        <span class="playpause-track" id="playpause"><i class="fa fa-play-circle"></i></span>
+        <button class="action-btn" id="share-btn"><i class="fa fa-share-alt"></i></button>
+      </div>
+
+      <div class="volume-container d-flex align-items-center gap-2 w-100 mt-3">
+        <i class="fa fa-volume-down"></i>
+        <input type="range" min="0" max="100" value="80" id="volume_slider">
+        <i class="fa fa-volume-up"></i>
+      </div>
+    </div>
+  </div>
+
+  <div id="eqPanel" class="eq-panel">
+    <h6 class="text-center mb-3" style="letter-spacing: 1px; color: var(--primary);">AUDIO EQUALIZER</h6>
+    
+    <div class="eq-container">
+      <div class="eq-column">
+        <span class="val-badge" id="v-60">0</span>
+        <input type="range" class="vertical-slider" id="eq-60" min="-12" max="12" value="0">
+        <span class="freq-name">60Hz</span>
+      </div>
+      <div class="eq-column">
+        <span class="val-badge" id="v-230">0</span>
+        <input type="range" class="vertical-slider" id="eq-230" min="-12" max="12" value="0">
+        <span class="freq-name">230Hz</span>
+      </div>
+      <div class="eq-column">
+        <span class="val-badge" id="v-910">0</span>
+        <input type="range" class="vertical-slider" id="eq-910" min="-12" max="12" value="0">
+        <span class="freq-name">910Hz</span>
+      </div>
+      <div class="eq-column">
+        <span class="val-badge" id="v-3600">0</span>
+        <input type="range" class="vertical-slider" id="eq-3600" min="-12" max="12" value="0">
+        <span class="freq-name">3.6kHz</span>
+      </div>
+      <div class="eq-column">
+        <span class="val-badge" id="v-14000">0</span>
+        <input type="range" class="vertical-slider" id="eq-14000" min="-12" max="12" value="0">
+        <span class="freq-name">14kHz</span>
+      </div>
+    </div>
+
+    <div class="bass-boost-section">
+       <div class="d-flex justify-content-between align-items-center mb-2">
+           <span style="font-size: 14px;"><i class="fa fa-drum"></i> Extra Bass</span>
+           <span id="bass-val" style="color: var(--primary); font-weight: bold;">0</span>
+       </div>
+       <input type="range" id="bass-boost" min="0" max="10" value="0" style="accent-color: var(--primary);">
+    </div>
+    
+    <button class="btn btn-primary w-100 mt-4 py-2 border-0" style="background: var(--accent-gradient); border-radius: 12px;" onclick="toggleEQ()">Apply & Close</button>
+  </div>
+
+  <script>
+    const track_data = {
+      name: "{{song_name|safe}}",
+      artist: "{{ singers.replace('&amp;','')|safe }}",
+      album: "{{album_name|safe}}",
+      image: "{{image}}",
+      path: "{{mp3_url}}"
+    };
+
+    let isPlaying = false;
+    let curr_track = new Audio();
+    curr_track.crossOrigin = "anonymous";
+    let updateTimer;
+
+    // Web Audio API for EQ
+    let audioCtx, source, filters = {};
+
+    // --- LOCAL STORAGE LOGIC ---
+    function saveSettings() {
+      const settings = {
+        f60: document.getElementById('eq-60').value,
+        f230: document.getElementById('eq-230').value,
+        f910: document.getElementById('eq-910').value,
+        f3600: document.getElementById('eq-3600').value,
+        f14000: document.getElementById('eq-14000').value,
+        bass: document.getElementById('bass-boost').value
+      };
+      localStorage.setItem('player_eq_presets', JSON.stringify(settings));
+    }
+
+    function loadSavedSettings() {
+      const saved = JSON.parse(localStorage.getItem('player_eq_presets'));
+      if (saved) {
+        const mapping = {60: 'f60', 230: 'f230', 910: 'f910', 3600: 'f3600', 14000: 'f14000'};
+        Object.keys(mapping).forEach(f => {
+          const val = saved[mapping[f]];
+          document.getElementById(`eq-${f}`).value = val;
+          document.getElementById(`v-${f}`).innerText = val > 0 ? `+${val}` : val;
+          if (filters[f]) filters[f].gain.value = val;
+        });
+        document.getElementById('bass-boost').value = saved.bass;
+        document.getElementById('bass-val').innerText = saved.bass;
+        if (filters['bass']) filters['bass'].gain.value = saved.bass * 2;
+      }
+    }
+
+    function initAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        source = audioCtx.createMediaElementSource(curr_track);
+        
+        const freq = [60, 230, 910, 3600, 14000];
+        let lastFilter = source;
+
+        freq.forEach(f => {
+          let filter = audioCtx.createBiquadFilter();
+          filter.type = "peaking";
+          filter.frequency.value = f;
+          filter.Q.value = 1;
+          filter.gain.value = 0;
+          lastFilter.connect(filter);
+          filters[f] = filter;
+          lastFilter = filter;
+        });
+
+        let bassFilter = audioCtx.createBiquadFilter();
+        bassFilter.type = "lowshelf";
+        bassFilter.frequency.value = 200;
+        bassFilter.gain.value = 0;
+        lastFilter.connect(bassFilter);
+        filters['bass'] = bassFilter;
+
+        bassFilter.connect(audioCtx.destination);
+        loadSavedSettings();
+      }
+    }
+
+    function loadTrack() {
+      curr_track.src = track_data.path;
+      curr_track.load();
+      document.getElementById("track-art").style.backgroundImage = `url(${track_data.image})`;
+      document.getElementById("track-name").textContent = track_data.name;
+      document.getElementById("track-artist").textContent = track_data.artist;
+      updateTimer = setInterval(seekUpdate, 1000);
+      setupMediaSession();
+    }
+
+    function toggleEQ() { 
+      initAudioContext();
+      document.getElementById("eqPanel").classList.toggle("active"); 
+    }
+
+    // EQ Listeners with Label Updates & Auto-Save
+    [60, 230, 910, 3600, 14000].forEach(f => {
+      document.getElementById(`eq-${f}`).addEventListener('input', (e) => {
+        const val = e.target.value;
+        document.getElementById(`v-${f}`).innerText = val > 0 ? `+${val}` : val;
+        if (filters[f]) filters[f].gain.value = val;
+        saveSettings();
+      });
+    });
+
+    document.getElementById('bass-boost').addEventListener('input', (e) => {
+      const val = e.target.value;
+      document.getElementById('bass-val').innerText = val;
+      if (filters['bass']) filters['bass'].gain.value = val * 2;
+      saveSettings();
+    });
+
+    function playpauseTrack() {
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      isPlaying ? pauseTrack() : playTrack();
+    }
+
+    function playTrack() {
+      curr_track.play();
+      isPlaying = true;
+      document.getElementById("player-container").classList.add('playing');
+      document.getElementById("playpause").innerHTML = '<i class="fa fa-pause-circle"></i>';
+    }
+
+    function pauseTrack() {
+      curr_track.pause();
+      isPlaying = false;
+      document.getElementById("player-container").classList.remove('playing');
+      document.getElementById("playpause").innerHTML = '<i class="fa fa-play-circle"></i>';
+    }
+
+    const seek_slider = document.getElementById("seek_slider");
+    seek_slider.addEventListener("input", () => {
+      curr_track.currentTime = curr_track.duration * (seek_slider.value / 100);
+      updateSeekBarColor();
+    });
+
+    function updateSeekBarColor() {
+      let val = seek_slider.value;
+      seek_slider.style.background = `linear-gradient(90deg, var(--primary) ${val}%, rgba(255,255,255,0.1) ${val}%)`;
+    }
+
+    function seekUpdate() {
+      if (!isNaN(curr_track.duration)) {
+        let pos = curr_track.currentTime * (100 / curr_track.duration);
+        seek_slider.value = pos;
+        updateSeekBarColor();
+        
+        let curMin = Math.floor(curr_track.currentTime / 60);
+        let curSec = Math.floor(curr_track.currentTime % 60);
+        let durMin = Math.floor(curr_track.duration / 60);
+        let durSec = Math.floor(curr_track.duration % 60);
+        document.getElementById("current-time").textContent = `${curMin}:${curSec < 10 ? '0'+curSec : curSec}`;
+        document.getElementById("total-duration").textContent = `${durMin}:${durSec < 10 ? '0'+durSec : durSec}`;
+      }
+    }
+
+    document.getElementById("share-btn").addEventListener("click", async () => {
+      const shareText = `🎵 Now Playing: ${track_data.name}\n🎤 Artist: ${track_data.artist}\n💿 Album: ${track_data.album}`;
+      if (navigator.share) {
+        await navigator.share({ title: track_data.name, text: shareText, url: window.location.href });
+      } else {
+        navigator.clipboard.writeText(shareText + "\n" + window.location.href);
+        showNotify("Details Copied!");
+      }
+    });
+
+    function setupMediaSession() {
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: track_data.name, artist: track_data.artist, album: track_data.album,
+          artwork: [{ src: track_data.image, sizes: '512x512', type: 'image/png' }]
+        });
+      }
+    }
+
+    async function downloadMusic() {
+      showNotify("Downloading...");
+      try {
+        const response = await fetch(track_data.path);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${track_data.name}.mp3`;
+        a.click();
+      } catch (e) { showNotify("Download failed"); }
+    }
+
+    function showNotify(msg) {
+      const n = document.getElementById("notification");
+      n.innerText = msg; n.style.display = "block";
+      setTimeout(() => n.style.display = "none", 3000);
+    }
+
+    function goHome() { window.location.href = "/"; }
+    document.getElementById("playpause").addEventListener("click", playpauseTrack);
+    document.getElementById("downloadBtn").addEventListener("click", downloadMusic);
+    document.getElementById("volume_slider").addEventListener("input", (e) => curr_track.volume = e.target.value / 100);
+    
+    loadTrack();
+  </script>
+</body>
+  </html>
