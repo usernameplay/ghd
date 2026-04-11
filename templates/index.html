@@ -3,114 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GHD MUSIC</title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Mini Music Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { --bg: #0f0f0f; --card: #1e1e1e; --accent: #1db954; --text: #ffffff; }
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding-bottom: 150px; }
-        header { padding: 20px; text-align: center; font-size: 24px; font-weight: bold; color: var(--accent); }
-        
-        .section-title { padding: 10px 20px; font-size: 18px; }
-        .horizontal-scroll { display: flex; overflow-x: auto; padding: 10px; gap: 15px; scrollbar-width: none; }
-        .horizontal-scroll::-webkit-scrollbar { display: none; }
-        
-        .album-card { min-width: 140px; background: var(--card); padding: 10px; border-radius: 10px; text-align: center; cursor: pointer; }
-        .album-card img { width: 100%; border-radius: 8px; }
-        .album-card p { font-size: 12px; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        /* Bottom Player */
-        #player-bar { position: fixed; bottom: 70px; left: 0; right: 0; background: #282828; padding: 10px; display: none; align-items: center; border-radius: 15px 15px 0 0; }
-        #player-bar img { width: 50px; height: 50px; border-radius: 5px; margin-right: 10px; }
-        
-        /* Bottom Nav */
-        .bottom-nav { position: fixed; bottom: 0; width: 100%; background: #000; display: flex; justify-content: space-around; padding: 15px 0; border-top: 1px solid #333; }
-        .bottom-nav i { font-size: 20px; color: #888; cursor: pointer; }
-        .bottom-nav .active { color: var(--accent); }
-
-        /* Search & Album View Overlay */
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 90%; background: var(--bg); display: none; overflow-y: auto; padding-top: 20px; z-index: 100; }
-        .song-item { display: flex; align-items: center; padding: 10px 20px; border-bottom: 1px solid #222; cursor: pointer; }
-        .close-btn { position: absolute; top: 10px; right: 20px; font-size: 25px; }
+        .mini-player { position: fixed; bottom: 0; left: 0; right: 0; background: #111; color: white; padding: 10px; display: none; }
     </style>
 </head>
-<body>
+<body class="bg-gray-900 text-white font-sans">
 
-    <header>GHD MUSIC</header>
-
-    <div id="home-content">
-        <div class="section-title">Malayalam Trending</div>
-        <div class="horizontal-scroll">
-            {% for album in data.malayalam %}
-            <div class="album-card" onclick="openAlbum('{{album.id}}')">
-                <img src="{{album.image}}">
-                <p>{{album.name}}</p>
-            </div>
-            {% endfor %}
-        </div>
+    <div class="container mx-auto p-5 pb-24">
+        <h1 class="text-3xl font-bold mb-5 text-center">JioSaavn Player</h1>
         
-        <div class="section-title">Tamil Trending</div>
-        <div class="horizontal-scroll">
-            {% for album in data.tamil %}
-            <div class="album-card" onclick="openAlbum('{{album.id}}')">
-                <img src="{{album.image}}">
-                <p>{{album.name}}</p>
+        <div class="flex gap-2 mb-8">
+            <input type="text" id="searchQuery" class="w-full p-3 rounded bg-gray-800 border border-gray-700" placeholder="Search for songs...">
+            <button onclick="searchSongs()" class="bg-blue-600 px-6 py-2 rounded">Search</button>
+        </div>
+
+        <div id="results" class="grid grid-cols-2 md:grid-cols-4 gap-4">
             </div>
-            {% endfor %}
+    </div>
+
+    <div id="miniPlayer" class="mini-player border-t border-gray-700">
+        <div class="container mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <img id="playerImg" src="" class="w-12 h-12 rounded shadow-lg">
+                <div>
+                    <p id="playerTitle" class="text-sm font-bold truncate w-32 md:w-64"></p>
+                    <p id="playerArtist" class="text-xs text-gray-400 truncate w-32"></p>
+                </div>
+            </div>
+            <audio id="audioElement" controls class="h-10"></audio>
         </div>
-    </div>
-
-    <div id="album-view" class="overlay">
-        <span class="close-btn" onclick="$('.overlay').hide()">&times;</span>
-        <div id="album-songs-list"></div>
-    </div>
-
-    <div id="player-bar">
-        <img id="play-img" src="">
-        <div style="flex-grow: 1;">
-            <div id="play-title" style="font-size: 14px; font-weight: bold;"></div>
-            <div id="play-artist" style="font-size: 12px; color: #aaa;"></div>
-        </div>
-        <audio id="main-audio" controls style="height: 30px;"></audio>
-    </div>
-
-    <div class="bottom-nav">
-        <i class="fas fa-home active" onclick="showHome()"></i>
-        <i class="fas fa-search" onclick="alert('Search feature loading...')"></i>
-        <i class="fas fa-list"></i>
     </div>
 
     <script>
-        function openAlbum(id) {
-            $.getJSON('/api/album/' + id, function(data) {
-                let html = `<div style="text-align:center; padding:20px;">
-                                <img src="${data.image.replace('150x150','500x500')}" style="width:200px; border-radius:10px;">
-                                <h2>${data.title}</h2>
-                            </div>`;
-                data.songs.forEach(song => {
-                    html += `<div class="song-item" onclick="playSong('${song.id}')">
-                                <div style="flex-grow:1;"><b>${song.song}</b><br><small>${song.singers}</small></div>
-                                <i class="fas fa-play"></i>
-                             </div>`;
-                });
-                $('#album-songs-list').html(html);
-                $('#album-view').fadeIn();
+        async function searchSongs() {
+            const query = document.getElementById('searchQuery').value;
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = "Searching...";
+
+            const response = await fetch(`/search?query=${query}`);
+            const songs = await response.json();
+            
+            resultsDiv.innerHTML = "";
+            songs.forEach(song => {
+                const card = document.createElement('div');
+                card.className = "bg-gray-800 p-3 rounded cursor-pointer hover:bg-gray-700 transition";
+                card.onclick = () => playSong(song.song, song.singers, song.image, song.media_url);
+                
+                card.innerHTML = `
+                    <img src="${song.image}" class="w-full aspect-square object-cover rounded mb-2">
+                    <p class="font-semibold truncate">${song.song}</p>
+                    <p class="text-xs text-gray-400 truncate">${song.singers}</p>
+                `;
+                resultsDiv.appendChild(card);
             });
         }
 
-        function playSong(id) {
-            $.getJSON('/api/song/' + id, function(data) {
-                $('#play-img').attr('src', data.image.replace('150x150','500x500'));
-                $('#play-title').text(data.song);
-                $('#play-artist').text(data.singers);
-                $('#main-audio').attr('src', data.download_url);
-                $('#player-bar').css('display', 'flex');
-                document.getElementById('main-audio').play();
-            });
-        }
-
-        function showHome() {
-            $('.overlay').hide();
+        function playSong(title, artist, img, url) {
+            document.getElementById('miniPlayer').style.display = 'block';
+            document.getElementById('playerTitle').innerText = title;
+            document.getElementById('playerArtist').innerText = artist;
+            document.getElementById('playerImg').src = img;
+            
+            const audio = document.getElementById('audioElement');
+            audio.src = url;
+            audio.play();
         }
     </script>
 </body>
